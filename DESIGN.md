@@ -68,6 +68,7 @@ $$ R(P, g) = \max_{p \in P} \left( \text{IoU}(p, g) \right) $$
 To encourage real-time performance, we apply a decay factor based on response time $t$:
 
 $$ S_{final} = R(P, g) \times e^{-\lambda t} $$
+
 (Where $\lambda$ is a tunable parameter, e.g., $0.1$ for seconds).
 
 ### 4.2. Aggregation & Weights
