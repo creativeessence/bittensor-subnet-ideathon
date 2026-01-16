@@ -120,6 +120,41 @@ Miners are free to implement *any* architecture. However, we provide reference i
 ### 6.3. Tier 3: LLM Agents (Future)
 - Miners run a VLM (like Video-LLaMA) that "watches" the video and reasons: *"I see a car here, but it's blue. The user asked for a red truck. I will skip."*
 
+### 6.4. Chutes (SN64) Integration
+
+Chutes (Subnet 64) serves as the scalable inference layer for ChronoSeek.
+
+#### Phase 1: Miner-Side Inference
+In the initial phase, miners use Chutes as a serverless backend to run their own models.
+1.  **Deploy:** Miner deploys their custom model image (e.g., Moment-DETR) to Chutes.
+2.  **Call:** Miner's Synapse `forward` function calls the Chutes API.
+3.  **Benefit:** Miners don't need to rent idle H100s; they pay per inference via SN64.
+
+#### Phase 2: Decentralized Inference (Validator Verification)
+In future versions, we move to a "Proof of Model" approach where Validators can directly verify the model running on Chutes.
+1.  **Commitment:** Miner uploads their model to Chutes and commits the `chute_id` and `miner_hotkey` metadata to the Bittensor chain.
+2.  **Verification:** Validators read the metadata and can send inference requests *directly* to the Miner's Chute to verify latency and accuracy, bypassing the Miner's local proxy.
+3.  **Efficiency:** This reduces hop latency and ensures the code running is exactly what was promised.
+
+```python
+# Example Miner Forward Logic using Chutes (Phase 1)
+import requests
+
+def forward(self, synapse: VideoSearchSynapse) -> VideoSearchSynapse:
+    payload = {
+        "video_url": synapse.video_url,
+        "query": synapse.query
+    }
+    # Call the deployed Chute
+    response = requests.post(
+        "https://api.chutes.ai/miner/my-moment-detr",
+        json=payload,
+        headers={"Authorization": f"Bearer {self.chutes_api_key}"}
+    )
+    synapse.results = response.json()['results']
+    return synapse
+```
+
 ## 7. Request/Response Protocol
 
 ### 7.1. Synapse Definition (Pydantic)
