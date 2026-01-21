@@ -1,8 +1,8 @@
-# Design Document: Semantic Video Moment Retrieval (SVMR) Subnet
+# Design Document: ChronoSeek (SVMR Subnet)
 
 ## 1. Introduction
 
-The SVMR Subnet aims to provide a decentralized service for retrieving specific video moments based on natural language queries. This document outlines the system architecture, including the miner and validator logic, leveraging state-of-the-art (SOTA) research in Temporal Video Grounding (TVG) and Video Moment Retrieval (VMR).
+ChronoSeek aims to provide a decentralized service for retrieving specific video moments based on natural language queries. This document outlines the system architecture, including the **Seeker** (Miner) and **Chrono Validator** logic, leveraging state-of-the-art (SOTA) research in Temporal Video Grounding (TVG) and Video Moment Retrieval (VMR).
 
 ## 2. Core Problem Definition
 
@@ -68,8 +68,7 @@ $$ R(P, g) = \max_{p \in P} \left( \text{IoU}(p, g) \right) $$
 To encourage real-time performance, we apply a decay factor based on response time $t$:
 
 $$ S_{final} = R(P, g) \times e^{-\lambda t} $$
-
-(Where $\lambda$ is a tunable parameter, e.g., $0.1$ for seconds).
+(Where $\lambda$ is a tunable parameter, e.g., $0.5$ for seconds. This steep decay incentivizes caching: instant cache hits ($t \approx 0.1s$) get near-perfect scores, while full re-processing ($t > 10s$) suffers a heavy penalty).
 
 ### 4.2. Aggregation & Weights
 - Scores are moving averages over the last $N$ queries (e.g., 500).
@@ -155,9 +154,26 @@ def forward(self, synapse: VideoSearchSynapse) -> VideoSearchSynapse:
     return synapse
 ```
 
+### 6.5. Optimization Strategies (The "Memory" Layer)
+To compete with centralized "Large Visual Memory Models" (like Memories.ai), Miners must implement efficient indexing strategies.
+
+1.  **Vector Caching (Write-Once, Read-Many):**
+    - Miners should hash the `video_url` and store the computed frame/clip embeddings in a local Vector DB (e.g., Milvus, Chroma, or FAISS).
+    - If a Validator sends a new query for a previously seen video, the Miner can skip the expensive encoding step and perform a millisecond-level vector search.
+
+2.  **Hierarchical Search (Coarse-to-Fine):**
+    - For long-form videos (>1 hour), sliding windows are too slow.
+    - **Step 1 (Coarse):** Sample frames every 10-60 seconds. Identify top-k candidate regions.
+    - **Step 2 (Fine):** Decode and process *only* the candidate regions at 1fps or higher to pinpoint exact start/end times.
+
+3.  **Multimodal Fusion (Audio/ASR):**
+    - Visuals alone are often insufficient (e.g., *"Find where they discuss inflation"*).
+    - Miners should transcribe audio using **Whisper** (or similar) and fuse the text embeddings with visual embeddings.
+    - **Fusion Strategy:** $S_{final} = \alpha \cdot S_{visual} + (1-\alpha) \cdot S_{text}$
+
 ## 7. Request/Response Protocol
 
-### 7.1. Synapse Definition (Pydantic)
+### 7.1. Synapse Definition (Standard Query)
 
 ```python
 import bittensor as bt
@@ -180,6 +196,32 @@ class VideoSearchSynapse(bt.Synapse):
     # Optional: Metadata for debugging
     miner_metadata: Optional[dict] = {}
 ```
+
+### 7.2. Proof of Model Protocol (Metadata Commitment)
+
+To enable "Phase 2" decentralized inference, miners commit their Chutes metadata to the chain. This allows Validators to verify the model running on the remote endpoint.
+
+**1. Metadata Structure (Committed to Subtensor via `serve_axon` or custom commitment):**
+```json
+{
+  "chute_id": "miner-x-moment-detr-v2",
+  "chute_image": "docker.io/miner-x/model:latest",
+  "chutes_public_endpoint": "https://api.chutes.ai/miner-x/inference",
+  "model_hash": "sha256:..." 
+}
+```
+
+**2. Direct Verification (No Synapse Required):**
+Validators periodically read the chain metadata and send inference requests *directly* to the committed Chute public endpoint.
+
+*   **Authentication:** The Chute is configured to accept requests signed by the Validator's hotkey (using Bittensor's standard authentication headers).
+*   **Verification:**
+    1.  Validator selects a random subset of Miners.
+    2.  Validator generates a synthetic task.
+    3.  Validator POSTs the task to the Miner's `chutes_public_endpoint`.
+    4.  Validator records latency and accuracy.
+    
+This approach removes the Miner's local machine from the loop entirely, ensuring true "serverless" evaluation.
 
 ## 8. Research & SOTA Approaches
 

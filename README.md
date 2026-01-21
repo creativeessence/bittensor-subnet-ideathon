@@ -1,8 +1,10 @@
-# Semantic Video Moment Retrieval (SVMR) Subnet
+# ChronoSeek (SVMR Subnet)
 
-> **A Bittensor subnet for decentralized semantic video moment retrieval.**
+> **Semantic search for video moments.**
 
-The **SVMR Subnet** enables semantic search over video content by mapping natural-language scene descriptions to precise timestamp intervals within a video.
+**ChronoSeek** is a decentralized AI subnet on Bittensor for semantic video moment retrieval, enabling users to locate precise timestamp intervals within videos using natural-language descriptions.
+
+🌐 **Website:** [chronoseek.ai](https://chronoseek.ai/)
 
 ---
 
@@ -11,10 +13,10 @@ The **SVMR Subnet** enables semantic search over video content by mapping natura
 This project is organized into the following key documents:
 
 - **[Problem Statement](./PROBLEM_STATEMENT.md)**  
-  *Why this subnet exists, the "dark data" problem, and the limitations of current search tools.*
+  *Why ChronoSeek exists, the "dark data" problem, and the limitations of current search tools.*
 
 - **[System Design](./DESIGN.md)**  
-  *Technical architecture, including Miner/Validator logic, Synthetic Task Generation, and SOTA research references (CLIP, LLMs).*
+  *Technical architecture for Seekers (Miners) and Chrono Validators, including Synthetic Task Generation and SOTA research.*
 
 - **[Business Logic & Market Rationale](./BUSINESS_LOGIC.md)**  
   *Market size ($94B+), commercialization strategy, and competitive advantage against centralized giants.*
@@ -25,8 +27,8 @@ This project is organized into the following key documents:
 
 ### 1. The Core Concept
 We are building a decentralized protocol where:
-*   **Miners** use AI models (CLIP, Transformers) to "watch" videos and find specific moments.
-*   **Validators** generate synthetic queries to grade miners and serve organic requests.
+*   **Seekers (Miners)** use AI models (CLIP, Transformers) to "watch" videos and find specific moments.
+*   **Chrono Validators** generate synthetic queries to grade miners and serve organic requests.
 *   **Users** get precise timestamps (e.g., "04:12 - 04:18") for natural language queries.
 
 ### 2. Architecture Overview
@@ -34,15 +36,20 @@ We are building a decentralized protocol where:
 User / Client
    │
    ▼
-Validator (Gateway)
+Chrono Validator (Gateway)
    ├─ Synthetic evaluation (scoring & weights)
    └─ Organic query routing
    │
    ▼
-Miners
+Seekers (Miners)
    └─ Semantic video analysis (CLIP / SOTA Models)
 ```
 
 ## 🛠️ Status
 *   **Phase:** Ideathon / Design
 *   **Current Focus:** Architecture Design, Market Validation, Protocol Definition.
+
+---
+
+## 📜 License
+MIT License
