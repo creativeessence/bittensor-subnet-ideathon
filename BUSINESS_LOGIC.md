@@ -62,9 +62,23 @@ ChronoSeek enables a new class of applications that compete directly with centra
 | **Inference Cost** | High (SaaS Markup) | **Market Rate** (Subsidized by Emissions) |
 | **Model Choice** | Proprietary Black Box | **Transparent SOTA** (Open Source models on Chutes) |
 | **Data Residency** | Must upload to their cloud | **Flexible** (Can run on private validator nodes) |
-| **Uptime** | Single Provider (SPOF) | **Decentralized** (Thousands of redundant Miners) |
+| **Uptime** | Single Provider (SPOF) | **Decentralized** (Thousands of redundant Seekers) |
 
-### 5.2. Proposed "Killer Apps"
+### 5.2. Strategic Integrations (The "Lego" Block Strategy)
+
+We don't operate in a silo. ChronoSeek integrates with other Bittensor subnets to build a complete video pipeline.
+
+#### ⚡ ChronoSeek x Chutes (SN64)
+**The "Serverless" Inference Layer:**
+1.  **Zero-Ops Scaling:** Instead of managing complex GPU fleets, ChronoSeek miners deploy their models (e.g., Moment-DETR) as serverless endpoints on Chutes.
+2.  **Verifiable Compute:** Validators verify the model integrity on-chain, ensuring that the "brain" behind the search is transparent and auditable.
+
+#### 🤝 ChronoSeek x Vidaio (SN85)
+**The "Smart Processing" Pipeline:**
+1.  **Smart Upscaling:** Users often want to enhance only specific moments (e.g., "Upscale the wedding kiss to 4K"). ChronoSeek identifies the 10-second clip, and **Vidaio** upscales *only* that segment, saving 99% of compute costs compared to processing the whole video.
+2.  **Efficient Indexing:** Vidaio miners can compress massive raw footage into lightweight proxies. ChronoSeek Seekers download these proxies for fast semantic indexing, reducing bandwidth costs.
+
+### 5.3. Proposed "Killer Apps"
 
 #### 1. ChronoSearch (The "Google for Video" Dashboard)
 *   **Target:** General Consumers & Researchers.

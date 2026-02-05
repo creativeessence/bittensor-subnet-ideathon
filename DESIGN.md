@@ -172,6 +172,18 @@ To compete with centralized "Large Visual Memory Models" (like Memories.ai), Min
     - Miners should transcribe audio using **Whisper** (or similar) and fuse the text embeddings with visual embeddings.
     - **Fusion Strategy:** $S_{final} = \alpha \cdot S_{visual} + (1-\alpha) \cdot S_{text}$
 
+### 6.6. Ecosystem Integrations
+
+#### Vidaio (SN85) Integration
+ChronoSeek leverages **Vidaio (SN85)** for video processing optimization:
+
+1.  **Ingest Optimization:**
+    - Before indexing, Validators/Miners can request Vidaio to **compress** raw high-bitrate footage into standardized low-res proxies (e.g., 720p).
+    - This ensures all Seekers work on uniform data and reduces bandwidth consumption by ~80%.
+2.  **Post-Retrieval Enhancement:**
+    - When a user finds a moment (e.g., *04:12-04:20*), they can optionally request an **Upscale** task.
+    - ChronoSeek forwards the specific timestamped clip to Vidaio for 4K upscaling, creating a high-quality "highlight reel" on demand.
+
 ## 7. Request/Response Protocol
 
 ### 7.1. Synapse Definition (Standard Query)
