@@ -120,47 +120,13 @@ Miners are free to implement *any* architecture. However, we provide reference i
 ### 6.3. Tier 3: LLM Agents (Future)
 - Miners run a VLM (like Video-LLaMA) that "watches" the video and reasons: *"I see a car here, but it's blue. The user asked for a red truck. I will skip."*
 
-### 6.4. Chutes (SN64) Integration
-
-Chutes (Subnet 64) serves as the scalable inference layer for ChronoSeek.
-
-#### Phase 1: Miner-Side Inference
-In the initial phase, miners use Chutes as a serverless backend to run their own models.
-1.  **Deploy:** Miner deploys their custom model image (e.g., Moment-DETR) to Chutes.
-2.  **Call:** Miner's Synapse `forward` function calls the Chutes API.
-3.  **Benefit:** Miners don't need to rent idle H100s; they pay per inference via SN64.
-
-#### Phase 2: Decentralized Inference (Validator Verification)
-In future versions, we move to a "Proof of Model" approach where Validators can directly verify the model running on Chutes.
-1.  **Commitment:** Miner uploads their model to Chutes and commits the `chute_id` and `miner_hotkey` metadata to the Bittensor chain.
-2.  **Verification:** Validators read the metadata and can send inference requests *directly* to the Miner's Chute to verify latency and accuracy, bypassing the Miner's local proxy.
-3.  **Efficiency:** This reduces hop latency and ensures the code running is exactly what was promised.
-
-```python
-# Example Miner Forward Logic using Chutes (Phase 1)
-import requests
-
-def forward(self, synapse: VideoSearchSynapse) -> VideoSearchSynapse:
-    payload = {
-        "video_url": synapse.video_url,
-        "query": synapse.query
-    }
-    # Call the deployed Chute
-    response = requests.post(
-        "https://api.chutes.ai/miner/my-moment-detr",
-        json=payload,
-        headers={"Authorization": f"Bearer {self.chutes_api_key}"}
-    )
-    synapse.results = response.json()['results']
-    return synapse
-```
-
-### 6.5. Optimization Strategies (The "Memory" Layer)
+### 6.4. Optimization Strategies (The "Memory" Layer)
 To compete with centralized "Large Visual Memory Models" (like Memories.ai), Miners must implement efficient indexing strategies.
 
 1.  **Vector Caching (Write-Once, Read-Many):**
     - Miners should hash the `video_url` and store the computed frame/clip embeddings in a local Vector DB (e.g., Milvus, Chroma, or FAISS).
-    - If a Validator sends a new query for a previously seen video, the Miner can skip the expensive encoding step and perform a millisecond-level vector search.
+    - **Note on Frequency:** While Validators select videos randomly from the web (minimizing cache hits for synthetic tasks), this strategy is critical for **organic traffic**, where users often search popular/viral videos repeatedly.
+    - If a Validator *does* reuse a video (or an organic user queries it), the Miner can skip the expensive encoding step and perform a millisecond-level vector search.
 
 2.  **Hierarchical Search (Coarse-to-Fine):**
     - For long-form videos (>1 hour), sliding windows are too slow.
@@ -172,9 +138,45 @@ To compete with centralized "Large Visual Memory Models" (like Memories.ai), Min
     - Miners should transcribe audio using **Whisper** (or similar) and fuse the text embeddings with visual embeddings.
     - **Fusion Strategy:** $S_{final} = \alpha \cdot S_{visual} + (1-\alpha) \cdot S_{text}$
 
-### 6.6. Ecosystem Integrations
+## 7. Ecosystem & Subnet Integration
 
-#### Vidaio (SN85) Integration
+ChronoSeek is designed to be composable, leveraging other Bittensor subnets for compute and processing.
+
+### 7.1. Chutes (SN64) Integration
+Chutes (Subnet 64) serves as the scalable, verifiable inference layer for ChronoSeek.
+
+#### Proof of Model Protocol (Decentralized Verification)
+ChronoSeek implements a "Proof of Model" architecture where Validators directly verify the model running on Chutes, bypassing the Miner's local machine entirely.
+
+1.  **Deployment:** The Miner deploys their model (e.g., Moment-DETR) to Chutes.
+2.  **Commitment:** The Miner commits the `chute_id` and `miner_hotkey` metadata to the Bittensor chain.
+3.  **Verification:** Validators read the metadata and send inference requests *directly* to the Miner's Chute public endpoint.
+4.  **Efficiency:** This ensures true "serverless" evaluation—latency is measured from the Chute edge, not the Miner's home internet connection.
+
+```python
+# Validator Verification Logic (Conceptual)
+def verify_miner(self, miner_hotkey):
+    # 1. Get Chute metadata from chain
+    metadata = self.get_commitment(miner_hotkey)
+    endpoint = metadata['chutes_public_endpoint']
+    
+    # 2. Send synthetic task directly to Chute
+    synthetic_task = {
+        "video_url": "https://example.com/video.mp4",
+        "query": "Find where they discuss inflation"
+    }
+    response = requests.post(
+        endpoint,
+        json=synthetic_task,
+        headers=bt.sign_headers(self.validator_hotkey) # Auth via Bittensor
+    )
+    
+    # 3. Score result
+    score = self.calculate_iou(response.json(), ground_truth)
+    return score
+```
+
+### 7.2. Vidaio (SN85) Integration
 ChronoSeek leverages **Vidaio (SN85)** for video processing optimization:
 
 1.  **Ingest Optimization:**
@@ -184,7 +186,7 @@ ChronoSeek leverages **Vidaio (SN85)** for video processing optimization:
     - When a user finds a moment (e.g., *04:12-04:20*), they can optionally request an **Upscale** task.
     - ChronoSeek forwards the specific timestamped clip to Vidaio for 4K upscaling, creating a high-quality "highlight reel" on demand.
 
-## 7. Request/Response Protocol
+## 8. Request/Response Protocol
 
 ### 7.1. Synapse Definition (Standard Query)
 
@@ -210,9 +212,9 @@ class VideoSearchSynapse(bt.Synapse):
     miner_metadata: Optional[dict] = {}
 ```
 
-### 7.2. Proof of Model Protocol (Metadata Commitment)
+### 8.2. Proof of Model Protocol (Metadata Commitment)
 
-To enable "Phase 2" decentralized inference, miners commit their Chutes metadata to the chain. This allows Validators to verify the model running on the remote endpoint.
+To enable the "Proof of Model" architecture described in Section 7.1, miners commit their Chutes metadata to the chain.
 
 **1. Metadata Structure (Committed to Subtensor via `serve_axon` or custom commitment):**
 ```json
@@ -224,19 +226,10 @@ To enable "Phase 2" decentralized inference, miners commit their Chutes metadata
 }
 ```
 
-**2. Direct Verification (No Synapse Required):**
-Validators periodically read the chain metadata and send inference requests *directly* to the committed Chute public endpoint.
+**2. Verification:**
+Validators read this metadata and execute the verification logic outlined in Section 7.1.
 
-*   **Authentication:** The Chute is configured to accept requests signed by the Validator's hotkey (using Bittensor's standard authentication headers).
-*   **Verification:**
-    1.  Validator selects a random subset of Miners.
-    2.  Validator generates a synthetic task.
-    3.  Validator POSTs the task to the Miner's `chutes_public_endpoint`.
-    4.  Validator records latency and accuracy.
-    
-This approach removes the Miner's local machine from the loop entirely, ensuring true "serverless" evaluation.
-
-## 8. Research & SOTA Approaches
+## 9. Research & SOTA Approaches
 
 Recent research (2024-2025) highlights several key directions:
 
