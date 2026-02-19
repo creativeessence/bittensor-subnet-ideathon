@@ -95,6 +95,9 @@ Since we cannot rely on human labelers, we use a **Video-Language Model (VLM)** 
     - The generated caption must *uniquely* identify the clip.
     - Run a lightweight check (e.g., CLIP similarity) against the *rest* of the video. If similarity is too high elsewhere, discard the task (it's too ambiguous).
 
+**Data Flywheel:**
+The Validator stores every generated tuple `{Video_URL, Timestamp, Synthetic_Description}`. This accumulates into a massive, high-quality dataset for Temporal Video Grounding (TVG), which is periodically open-sourced to the community or licensed for commercial VLM training.
+
 ### 5.2. Organic Traffic Routing
 - Validators expose an HTTP API endpoint.
 - Organic requests are forwarded to top-performing miners.
