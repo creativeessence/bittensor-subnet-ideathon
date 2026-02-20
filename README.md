@@ -16,7 +16,10 @@ This project is organized into the following key documents:
   *Why ChronoSeek exists, the "dark data" problem, and the limitations of current search tools.*
 
 - **[System Design](./DESIGN.md)**  
-  *Technical architecture for Seekers (Miners) and Chrono Validators, including Synthetic Task Generation and SOTA research.*
+  *Technical architecture for Seekers (Miners) and Chrono Validators, including Incentive Mechanism, Attack Vectors, and Ecosystem Integrations.*
+
+- **[MVP Specifications](./MVP_SPEC.md)**  
+  *The "Start Small" launch plan using the ActivityNet dataset to ensure consistency between design and initial testnet behavior.*
 
 - **[Business Logic & Market Rationale](./BUSINESS_LOGIC.md)**  
   *Market size ($94B+), commercialization strategy, and competitive advantage against centralized giants.*

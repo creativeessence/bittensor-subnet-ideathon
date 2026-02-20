@@ -4,6 +4,8 @@
 
 ChronoSeek aims to provide a decentralized service for retrieving specific video moments based on natural language queries. This document outlines the system architecture, including the **Seeker** (Miner) and **Chrono Validator** logic, leveraging state-of-the-art (SOTA) research in Temporal Video Grounding (TVG) and Video Moment Retrieval (VMR).
 
+> **Note:** For the initial launch, please refer to **[MVP_SPEC.md](./MVP_SPEC.md)** which defines a simplified, "airtight" scope using fixed datasets (ActivityNet) and deterministic scoring to ensure a stable network genesis.
+
 ## 2. Core Problem Definition
 
 **Input:**
@@ -60,9 +62,17 @@ The score $S$ for a query is calculated based on the **Intersection over Union (
 
 $$ \text{IoU}(p, g) = \frac{\text{intersection}(p, g)}{\text{union}(p, g)} $$
 
-We define a reward function $R$ that prioritizes high-overlap matches:
+**Oversized Interval Penalty:**
+To prevent "wide net" fishing (e.g., predicting 0:00-10:00 for a 10s event), we apply a penalty if the predicted duration is significantly larger than the ground truth.
 
-$$ R(P, g) = \max_{p \in P} \left( \text{IoU}(p, g) \right) $$
+$$ \text{Penalty}(p, g) = \max(0, \frac{\text{duration}(p)}{\text{duration}(g)} - 2.0) $$
+
+(If prediction is >2x longer than GT, score decays linearly).
+
+**Frame Challenge (Proof of Access):**
+Miners must return a hash of the frame at the center of their predicted interval. Validators verify this against the ground truth video to ensure the miner actually processed the content and isn't just guessing timestamps based on metadata.
+
+$$ R(P, g) = \max_{p \in P} \left( \text{IoU}(p, g) \times (1 - \text{Penalty}(p, g)) \right) \times \mathbb{I}(\text{FrameHash is Correct}) $$
 
 **Latency Penalty:**
 To encourage real-time performance, we apply a decay factor based on response time $t$:
@@ -81,19 +91,27 @@ Validators are the "gatekeepers" of quality. They must generate tasks that are *
 
 ### 5.1. Synthetic Task Generation Pipeline (The "Oracle")
 
-Since we cannot rely on human labelers, we use a **Video-Language Model (VLM)** pipeline:
+Since we cannot rely on human labelers, we use a hybrid **Video-Language Model (VLM)** pipeline with quality assurance:
 
-1.  **Video Source:** Maintain a rolling buffer of Creative Commons videos (YouTube, Vimeo) to prevent miners from overfitting on a static dataset.
-2.  **Clip Sampling:**
-    - Randomly sample a duration $d \in [5s, 60s]$.
-    - Randomly sample a start time $t_{start}$.
-    - Extract clip $C = V[t_{start} : t_{start} + d]$.
-3.  **Caption Generation:**
-    - Feed clip $C$ to a VLM (e.g., GPT-4o, Gemini Pro Vision, or open-source LLaVA-Video).
-    - Prompt: *"Describe the main action or event in this video clip in one specific sentence. Do not mention visual cuts or camera angles."*
-4.  **Relevance Check (Anti-Ambiguity):**
-    - The generated caption must *uniquely* identify the clip.
-    - Run a lightweight check (e.g., CLIP similarity) against the *rest* of the video. If similarity is too high elsewhere, discard the task (it's too ambiguous).
+**1. Video Source (Data Governance):**
+- **Allowlist:** Use only Creative Commons (CC-BY), Public Domain, or licensed datasets (e.g., ActivityNet, Charades) to ensure legal compliance.
+- **Hosting:**
+    - **Primary (Zero-Copy):** Validators use direct URLs from original public sources (e.g., YouTube, Vimeo) to minimize redundancy and storage costs.
+    - **Secondary (Decentralized):** If persistent storage is required (e.g., for custom datasets or redundancy), ChronoSeek integrates with **Hippius (Subnet 75)**, prioritizing Bittensor ecosystem synergy over generic storage solutions.
+
+**2. Clip Sampling:**
+- Randomly sample a duration $d \in [5s, 60s]$.
+- Randomly sample a start time $t_{start}$.
+- Extract clip $C = V[t_{start} : t_{start} + d]$.
+
+**3. Caption Generation:**
+- Feed clip $C$ to a VLM (e.g., GPT-4o, Gemini Pro Vision).
+- Prompt: *"Describe the main action or event in this video clip in one specific sentence. Do not mention visual cuts or camera angles."*
+
+**4. Quality Assurance (Anti-Fragility):**
+- **Relevance Check:** Run a lightweight check (e.g., CLIP similarity) against the *rest* of the video. If similarity is too high elsewhere, discard the task (it's too ambiguous).
+- **Gold Standard Mixing:** 10% of tasks are drawn from a curated "Gold Standard" dataset (human-labeled) to calibrate the synthetic generator and detect overfitting.
+- **Generator Rotation:** Rotate the VLM used for generation (e.g., swap between GPT-4o and Gemini) to prevent miners from overfitting to one model's captioning style.
 
 **Data Flywheel:**
 The Validator stores every generated tuple `{Video_URL, Timestamp, Synthetic_Description}`. This accumulates into a massive, high-quality dataset for Temporal Video Grounding (TVG), which is periodically open-sourced to the community or licensed for commercial VLM training.
@@ -191,7 +209,7 @@ ChronoSeek leverages **Vidaio (SN85)** for video processing optimization:
 
 ## 8. Request/Response Protocol
 
-### 7.1. Synapse Definition (Standard Query)
+### 8.1. Synapse Definition (Standard Query)
 
 ```python
 import bittensor as bt
@@ -232,26 +250,38 @@ To enable the "Proof of Model" architecture described in Section 7.1, miners com
 **2. Verification:**
 Validators read this metadata and execute the verification logic outlined in Section 7.1.
 
-## 9. Research & SOTA Approaches
+## 9. Security & Attack Vectors (Robustness)
+
+To ensure the "Quality and robustness of incentive design" (Judging Criterion 1), ChronoSeek implements specific defenses against known subnet attack vectors.
+
+| Attack Vector | Description | ChronoSeek Defense |
+| :--- | :--- | :--- |
+| **"The Wikipedia Cheat"** | Miner looks up video metadata/summary online instead of processing the video. | **Frame Challenge:** Miner must return the hash of the specific frame at the center of the interval. Proof of Access. |
+| **"The Wide Net"** | Miner predicts a huge interval (e.g., 10 mins) to guarantee high Recall but low Precision. | **Oversized Interval Penalty:** Score decays linearly if prediction > 2x Ground Truth duration. |
+| **"The Overfit"** | Miner memorizes the synthetic task generator's prompts. | **Generator Rotation:** Validators swap between GPT-4o, Gemini, and Claude. **Gold Standard Mixing:** 10% of tasks are human-labeled (ActivityNet). |
+| **"The Replay"** | Miner replays old answers for the same video. | **Salted Queries:** Validators slightly perturb prompts (e.g., "Find the red car" -> "Locate the scarlet vehicle") to ensure semantic understanding, not just hash matching. |
+
+
+## 10. Research & SOTA Approaches
 
 Recent research (2024-2025) highlights several key directions:
 
-### 8.1. Large Language Model (LLM) Enhanced Retrieval
+### 10.1. Large Language Model (LLM) Enhanced Retrieval
 - **Concept:** Use LLMs to bridge the gap between complex natural language queries and visual features.
 - **Papers:** ["Context-Enhanced Video Moment Retrieval with Large Language Models"](https://arxiv.org/abs/2405.12540) (Weijia Liu., 2024).
 - **Application:** Miners can use LLMs to expand queries or reason about the video content before retrieval.
 
-### 8.2. Contrastive Learning & CLIP-based Approaches
+### 10.2. Contrastive Learning & CLIP-based Approaches
 - **Concept:** Leverage pre-trained Vision-Language Models (VLMs) like CLIP to align video frames/segments with text queries.
 - **Papers:** ["Video Corpus Moment Retrieval with Contrastive Learning"](https://arxiv.org/abs/2105.06247) (Hao Zhang., 2021).
 - **Application:** A strong baseline for miners is to extract frame embeddings using CLIP and compute cosine similarity with the query embedding across a sliding window.
 
-### 8.3. Proposal-Free / Regression Approaches
+### 10.3. Proposal-Free / Regression Approaches
 - **Concept:** Instead of ranking pre-defined proposals (sliding windows), directly predict start/end timestamps.
 - **Papers:** ["Moment-DETR"](https://arxiv.org/abs/2107.09609) (Jie Lei., 2021), ["Time-R1"](https://arxiv.org/abs/2503.13377) (Boshen Xu., 2025).
 - **Application:** More efficient for long videos but requires more specialized model training.
 
-### 8.4. Bias Mitigation
+### 10.4. Bias Mitigation
 - **Concept:** Datasets often have temporal biases (e.g., moments often at the beginning). SOTA methods use causal inference to de-bias.
 - **Relevance:** Validators must ensure synthetic queries do not favor trivial baselines (e.g., "always guess the middle").
 
