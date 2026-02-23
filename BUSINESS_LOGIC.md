@@ -102,7 +102,8 @@ We don't operate in a silo. ChronoSeek integrates with other Bittensor subnets t
 *   **Why ChronoSeek?** Existing plugins (Envato, Twelve Labs) require uploading terabytes of raw footage to the cloud. ChronoSeek Miners can (in future phases) run inference on local proxies or sharded data.
 
 ## 6. Why Bittensor? (The "Why Now?")
-- **Incentivizing SOTA:** Centralized companies are slow to update models. Bittensor Miners update *instantly* when a new paper drops to gain an edge.
+- **Incentivizing SOTA:** Centralized companies are slow to update models. Bittensor Seekers update *instantly* when a new paper drops to gain an edge.
+    - *Example:* Microsoft released **CoPE-VideoLM** on Feb 13, 2026. While Memories.ai might take 6 months to integrate it, ChronoSeek miners will deploy it *tomorrow* to win rewards.
 - **Cost Efficiency:** No massive overhead for R&D; the network naturally surfaces the most efficient models.
 - **Censorship Resistance:** Search results are not filtered or biased by corporate policy (e.g., suppressing certain news footage).
 

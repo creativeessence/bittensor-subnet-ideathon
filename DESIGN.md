@@ -281,7 +281,12 @@ Recent research (2024-2025) highlights several key directions:
 - **Papers:** ["Moment-DETR"](https://arxiv.org/abs/2107.09609) (Jie Lei., 2021), ["Time-R1"](https://arxiv.org/abs/2503.13377) (Boshen Xu., 2025).
 - **Application:** More efficient for long videos but requires more specialized model training.
 
-### 10.4. Bias Mitigation
+### 10.4. Temporal Dynamics & Positional Encoding
+- **Concept:** Traditional VLMs struggle to understand "when" something happens. New models use learnable positional embeddings to grasp the sequence of events.
+- **Papers:** ["CoPE-VideoLM: Codec Primitives For Efficient Video Language Models"](https://www.arxiv.org/abs/2602.13191) (Sayan Deb Sarkar, Fri, 13 Feb 2026).
+- **Application:** Miners can fine-tune CoPE-VideoLM to drastically improve performance on queries involving "before/after" logic (e.g., "The moment *after* the car crashes").
+
+### 10.5. Bias Mitigation
 - **Concept:** Datasets often have temporal biases (e.g., moments often at the beginning). SOTA methods use causal inference to de-bias.
 - **Relevance:** Validators must ensure synthetic queries do not favor trivial baselines (e.g., "always guess the middle").
 
